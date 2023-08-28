@@ -17,6 +17,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import RedirectResponse
 import jwt
 from datetime import datetime, timedelta
+from fastapi import HTTPException, Depends
 from app.security import create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -185,8 +186,6 @@ async def login(email: str, password: str):
     finally:
         cursor.close()
         
-from datetime import datetime, timedelta
-from fastapi import HTTPException, Depends
 
 @app.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(token: str = Depends(decode_access_token)):
