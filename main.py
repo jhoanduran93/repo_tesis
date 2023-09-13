@@ -19,6 +19,8 @@ from app.models.message import Message
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import RedirectResponse
 import jwt
+from datetime import datetime
+from fastapi import HTTPException
 from datetime import datetime, timedelta
 from fastapi import HTTPException, Depends
 from app.security import create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -176,8 +178,6 @@ async def get_user_conversations(user_id: int):
     finally:
         cursor.close()
 
-from datetime import datetime
-from fastapi import HTTPException
 
 @app.post("/send_message", status_code=status.HTTP_201_CREATED, response_model= Message, tags=["message"])
 async def send_message(idconversation: int, content: str):
