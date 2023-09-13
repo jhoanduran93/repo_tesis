@@ -29,47 +29,28 @@ app = FastAPI()
 # Configura tu clave API de GPT-3
 openai.api_key = "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"
 
-class ChatbotWebSocket(WebSocket):
-    async def on_connect(self):
-        await self.accept()
-        await self.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas.")
+@app.websocket("/chatbot")
+async def chatbot_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas.")
 
-    async def on_receive(self, text_data: str):
+    while True:
+        data = await websocket.receive_text()
+
         try:
             # Usa GPT-3 para generar una respuesta
             response = openai.Completion.create(
                 engine="text-davinci-002",
-                prompt=f"Responder a la siguiente pregunta: {text_data}",
+                prompt=f"Responder a la siguiente pregunta: {data}",
                 max_tokens=50  # Ajusta este valor según tus necesidades
             )
 
             # Extrae la respuesta generada por GPT-3
             answer = response.choices[0].text
 
-            await self.send_text(answer)
+            await websocket.send_text(answer)
         except Exception as e:
-            await self.send_text(f"Error: {str(e)}")
-
-@app.websocket("/chatbot")
-async def chatbot_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    chatbot_ws = ChatbotWebSocket(websocket)
-    await chatbot_ws.on_connect()
-    
-    while True:
-        data = await websocket.receive_text()
-        await chatbot_ws.on_receive(data)
-
-@app.websocket("/chatbot")
-async def chatbot_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    chatbot_ws = ChatbotWebSocket(websocket)
-    await chatbot_ws.on_connect()
-    
-    while True:
-        data = await websocket.receive_text()
-        await chatbot_ws.on_receive(data)
-
+            await websocket.send_text(f"Error: {str(e)}")
 
 
         
