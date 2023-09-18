@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import List, Union
 
 from fastapi import FastAPI, HTTPException, status, WebSocket, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.encoders import jsonable_encoder
 import jwt
@@ -18,6 +19,15 @@ from app.security import Security, create_access_token, decode_access_token, ACC
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI()
+
+# Configuración CORS para permitir solicitudes desde tu dominio de React
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://tu-app-react.com"],  # Reemplaza la URL de tu aplicación React
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configura tu clave API de GPT-3
 openai.api_key = Security.GPT3_API_KEY
@@ -87,6 +97,7 @@ def chatbot(question: str):
 
     except Exception as e:
         return {"error": str(e)}
+    
 
 @app.post("/create_user",status_code=status.HTTP_201_CREATED,response_model= User ,tags= ["user"])
 async def create_user(user: User):
