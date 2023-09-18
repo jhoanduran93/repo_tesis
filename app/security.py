@@ -2,9 +2,13 @@ import jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 
+
 SECRET_KEY = "502481xxc"  #clave segura
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # El tiempo de vencimiento del token (30)
+
+class Security:
+    GPT3_API_KEY = "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"
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
