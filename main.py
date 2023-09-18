@@ -47,7 +47,7 @@ async def chatbot_endpoint(websocket: WebSocket):
             response = openai.Completion.create(
                 engine="text-davinci-002",
                 prompt=f"Responder a la siguiente pregunta: {data}",
-                max_tokens=50  # Ajusta este valor según tus necesidades
+                max_tokens=80  # Ajusta este valor según tus necesidades
             )
 
             # Extrae la respuesta generada por GPT-3
@@ -59,7 +59,7 @@ async def chatbot_endpoint(websocket: WebSocket):
 
 
         
-@app.post("/chatbot1user")
+@app.post("/chatbot1user", status_code= status.HTTP_201_CREATED,tags=["Chatbot"])
 def chatbot(question: str):
     """
     Ruta para obtener una respuesta del chatbot basada en una pregunta.
@@ -306,7 +306,7 @@ async def login(email: str, password: str):
         cursor.close()
         
 
-@app.post("/logout", status_code=status.HTTP_200_OK)
+@app.post("/logout", status_code=status.HTTP_200_OK, tags=["Login"])
 async def logout(token: str = Depends(decode_access_token)):
     """
     Cierra la sesión de usuario.
