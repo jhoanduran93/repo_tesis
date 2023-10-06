@@ -3,10 +3,10 @@ from mysql.connector import errorcode
 
 # Configura la conexión a la base de datos
 db_config = {
-    "host": "localhost",  
-    "user": "root",
-    "password": "123456789",
-    "database": "mydb",  
+    "host": "bls0lv8b15zncfgr7bde-mysql.services.clever-cloud.com",  
+    "user": "u2i1vzpgkh9zegil",
+    "password": "RTfrtrFKOovCPvgjMi84",
+    "database": "bls0lv8b15zncfgr7bde",  
 }
 
 try:

@@ -1,14 +1,17 @@
 import os
 import sys
+import mysql.connector
 from datetime import date, datetime, timedelta
 from typing import List, Union
 
-from fastapi import FastAPI, HTTPException, status, WebSocket, Depends
+from fastapi import FastAPI, HTTPException, status, WebSocket, Depends, HTTPException,  WebSocketDisconnect, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.encoders import jsonable_encoder
 import jwt
 import openai
+
+from mysql.connector import errorcode
 
 from app.db.database import conn
 from app.models.user import User
@@ -46,26 +49,35 @@ async def chatbot_endpoint(websocket: WebSocket):
     Returns:
         None
     """
-    await websocket.accept()
-    await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas.")
+    try:
+        await websocket.accept()
+        await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas.")
 
-    while True:
-        data = await websocket.receive_text()
+        while True:
+            data = await websocket.receive_text()
 
-        try:
-            # Usa GPT-3 para generar una respuesta
-            response = openai.Completion.create(
-                engine="text-davinci-002",
-                prompt=f"Responder a la siguiente pregunta: {data}",
-                max_tokens=80  # Ajusta este valor según tus necesidades
-            )
+            try:
+                # Usa GPT-3 para generar una respuesta
+                response = openai.Completion.create(
+                    engine="text-davinci-002",
+                    prompt=f"Responder a la siguiente pregunta: {data}",
+                    max_tokens= 200  # Ajusta este valor según tus necesidades
+                )
 
-            # Extrae la respuesta generada por GPT-3
-            answer = response.choices[0].text
+                # Extrae la respuesta generada por GPT-3
+                answer = response.choices[0].text
 
-            await websocket.send_text(answer)
-        except Exception as e:
-            await websocket.send_text(f"Error: {str(e)}")
+                await websocket.send_text(answer)
+            except Exception as e:
+                await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
+    except WebSocketDisconnect as e:
+        await websocket.close()
+        # Puedes agregar lógica adicional para manejar desconexiones de WebSocket si es necesario
+        print(f"Conexión cerrada: {e}")
+    except HTTPException as e:
+        await websocket.send_text(f"Error HTTP: {e.detail}")
+    except Exception as e:
+        await websocket.send_text(f"Error inesperado: {str(e)}")
 
 
         
@@ -99,7 +111,7 @@ def chatbot(question: str):
         return {"error": str(e)}
     
 
-@app.post("/create_user",status_code=status.HTTP_201_CREATED,response_model= User ,tags= ["user"])
+@app.post("/create_user", status_code=status.HTTP_201_CREATED, response_model=User, tags=["user"])
 async def create_user(user: User):
     """
     Ruta para crear un nuevo usuario en la base de datos.
@@ -119,52 +131,60 @@ async def create_user(user: User):
         cursor.execute(query, (user.name, user.email, user.password))
         conn.commit()
         return user
-    except Exception as e:
-        raise HTTPException(status_code=500 , detail=str(e))
+    except mysql.connector.Error as e:
+        if e.errno == errorcode.ER_DUP_ENTRY:
+            #manejo de un error (entrada duplicada)
+            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado")
+        else:
+            # Manejo genérico de otros errores
+            raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
     finally:
         cursor.close()
         
-@app.get("/get_user/{user_id}", status_code=status.HTTP_201_CREATED,response_model=User, tags=["user"])
-async def get_user(user_id: int):
+@app.get("/get_user", status_code=status.HTTP_200_OK, response_model=User, tags=["user"])
+async def get_user_by_email(email: str):
     """
-    Obtener información de un usuario por su ID.
+    Obtener información de un usuario por su correo electrónico.
 
     Args:
-        user_id (int): El ID del usuario a buscar.
+        email (str): El correo electrónico del usuario a buscar.
 
     Returns:
         dict: La información del usuario encontrado.
 
     Raises:
-        HTTPException: Si el usuario no se encuentra.
+        HTTPException 404: Si el usuario no se encuentra.
+        HTTPException 500: Si hay un error en el servidor al obtener el usuario.
     """
     cursor = conn.cursor()
     try:
-        # Consulta el usuario por ID en la base de datos
-        query = "SELECT * FROM user WHERE iduser = %s"
-        cursor.execute(query, (user_id,))
+        # Consulta el usuario por correo electrónico en la base de datos
+        query = "SELECT * FROM user WHERE email = %s"
+        cursor.execute(query, (email,))
         user_data = cursor.fetchone()
         if not user_data:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            raise HTTPException(status_code=404, detail=f"Usuario con correo electrónico {email} no encontrado")
+        
+        # Crear una instancia de User con los datos obtenidos de la base de datos
         user = User(iduser=user_data[0], name=user_data[1], email=user_data[2], password=user_data[3])
         return user
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error al obtener el usuario {str(e)}")
     finally:
         cursor.close()
 
-@app.delete("/delete_user/{user_id}", status_code=status.HTTP_201_CREATED,response_model=User, tags=["user"])
-async def delete_user(user_id: int):
+@app.delete("/delete_user/{user_email}", status_code=status.HTTP_201_CREATED, response_model=User, tags=["user"])
+async def delete_user(user_email: str = Path(..., description="Email del usuario")):
     """
-    Elimina un usuario por su ID.
+    Elimina un usuario por su correo electrónico.
 
-    Permite eliminar un usuario existente proporcionando su ID.
+    Permite eliminar un usuario existente proporcionando su correo electrónico.
     """
     cursor = conn.cursor()
     try:
-        # Elimina el usuario por ID en la base de datos
-        query = "DELETE FROM user WHERE iduser = %s"
-        cursor.execute(query, (user_id,))
+        # Elimina el usuario por correo electrónico en la base de datos
+        query = "DELETE FROM user WHERE email = %s"
+        cursor.execute(query, (user_email,))
         conn.commit()
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -174,30 +194,38 @@ async def delete_user(user_id: int):
     finally:
         cursor.close()
 
-@app.put("/update_user/{user_id}", status_code=status.HTTP_201_CREATED,response_model=User, tags=["user"])
-async def update_user(user_id: int, updated_user: User):
+@app.put("/update_user/{user_email}", status_code=status.HTTP_201_CREATED, response_model=User, tags=["user"])
+async def update_user(user_email: str, updated_user: User):
     """
-    Actualiza la información de un usuario por su ID.
+    Actualiza la información de un usuario por su correo electrónico.
 
-    Permite actualizar la información de un usuario existente proporcionando su ID y los datos actualizados.
+    Permite actualizar la información de un usuario existente proporcionando su correo electrónico y los datos actualizados.
+
+    Args:
+        user_email (str): El correo electrónico del usuario a actualizar.
+
+    Returns:
+        User: El usuario actualizado.
+
+    Raises:
+        HTTPException: Si el usuario no se encuentra.
     """
     cursor = conn.cursor()
     try:
-        # Actualiza el usuario por ID en la base de datos
-        query = "UPDATE user SET name = %s, email = %s, password = %s WHERE iduser = %s"
-        cursor.execute(query, (updated_user.name, updated_user.email, updated_user.password, user_id))
+        # Actualiza el usuario por correo electrónico en la base de datos
+        query = "UPDATE user SET name = %s, email = %s, password = %s WHERE email = %s"
+        cursor.execute(query, (updated_user.name, updated_user.email, updated_user.password, user_email))
         conn.commit()
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         return updated_user
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail= "Usuario no encontrado")
     finally:
         cursor.close()
 
-
-@app.post("/create_conversation", status_code=status.HTTP_201_CREATED, response_model = Conversation, tags=["conversation"])
-async def create_conversation(iduser: int):
+@app.post("/create_conversation", status_code=status.HTTP_201_CREATED, response_model=Conversation, tags=["conversation"])
+async def create_conversation(email: str):
     """
     Crea una nueva conversación para un usuario.
 
@@ -206,46 +234,85 @@ async def create_conversation(iduser: int):
     cursor = conn.cursor()
     
     try:
+        # Obtiene el ID del usuario usando el correo electrónico
+        query_user_id = "SELECT iduser FROM user WHERE email = %s"
+        cursor.execute(query_user_id, (email,))
+        user_id = cursor.fetchone()
+
+        if not user_id:
+            raise HTTPException(status_code=404, detail=f"Usuario con correo electrónico {email} no encontrado")
+
+        user_id = user_id[0]
         
         # Inserta una nueva conversación en la base de datos
-        
         today = date.today()
-        query = "INSERT INTO conversation (start_date, end_date, iduser) VALUES (%s, %s, %s)"
-        cursor.execute(query, (today, today, iduser))
+        query = "INSERT INTO conversation (star_date, end_date, iduser) VALUES (%s, %s, %s)"
+        cursor.execute(query, (today, today, user_id))
         conn.commit()
-         # Obtén el ID de la conversación recién creada
+        
+        # Obtiene el ID de la conversación recién creada
         conversation_id = cursor.lastrowid
 
         # Construye y devuelve una instancia del modelo Conversation con los datos relevantes
-        new_conversation = Conversation(idconversation=conversation_id, start_date=today, end_date=today, iduser=iduser)
+        new_conversation = Conversation(idconversation=conversation_id, start_date=today, end_date=today, iduser=user_id)
         return new_conversation
      
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail= "Usuario no encontrado")
     finally:
         cursor.close()
         
-@app.get("/get_user_conversations/{user_id}", response_model=List[Conversation], tags=["conversation"])
-async def get_user_conversations(user_id: int):
+from fastapi import FastAPI, HTTPException, Path
+from typing import List
+from app.models.conversation import Conversation
+import mysql.connector
+from mysql.connector import errorcode
+
+# ... (código anterior)
+
+@app.get("/get_user_conversations/{email}", response_model=List[Conversation], tags=["conversation"])
+async def get_user_conversations(email: str = Path(..., description="Email del usuario")):
     """
-    Obtiene todas las conversaciones de un usuario.
+    Obtiene todas las conversaciones de un usuario por su correo electrónico.
 
     Permite a un usuario obtener una lista de todas sus conversaciones.
+
+    Args:
+        email (str): El correo electrónico del usuario.
+
+    Returns:
+        List[Conversation]: Lista de conversaciones del usuario.
+
+    Raises:
+        HTTPException 404: Si el usuario no tiene conversaciones.
+        HTTPException 500: Si hay un error en el servidor al obtener las conversaciones.
     """
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)  # Usar dictionary=True para obtener resultados como diccionarios
     try:
         # Consulta todas las conversaciones de un usuario en la base de datos
-        query = "SELECT * FROM conversation WHERE iduser = %s"
-        cursor.execute(query, (user_id,))
+        query = "SELECT * FROM conversation WHERE iduser = (SELECT iduser FROM user WHERE email = %s)"
+        cursor.execute(query, (email,))
+        
         conversations = []
         for row in cursor.fetchall():
-            conversations.append({"idconversation": row[0], "start_date": row[1], "end_date": row[2], "iduser": row[3]})
+            conversation_model = Conversation(idconversation=row["idconversation"], star_date=row["star_date"], end_date=row["end_date"], iduser=row["iduser"])
+            conversations.append(conversation_model)
+
+        if not conversations:
+            raise HTTPException(status_code=404, detail=f"Usuario con email {email} no tiene conversaciones")
+
         return conversations
+    except mysql.connector.Error as e:
+        if e.errno == errorcode.ER_NO_SUCH_TABLE:
+            raise HTTPException(status_code=500, detail="Error en la base de datos: la tabla no existe")
+        else:
+            raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
-
 
 @app.post("/send_message", status_code=status.HTTP_201_CREATED, response_model= Message, tags=["message"])
 async def send_message(idconversation: int, content: str):
@@ -345,3 +412,60 @@ async def logout(token: str = Depends(decode_access_token)):
         return {"message": "Sesión cerrada exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/get_user_conversations_all/{email}", response_model=List[Conversation], tags=["conversation"])
+async def get_user_conversations(email: str):
+    cursor = conn.cursor(dictionary=True)
+    try:
+        query = """
+            SELECT conversation.idconversation, conversation.star_date, conversation.end_date, conversation.iduser,
+                   message.idmessage, message.content, message.hour
+            FROM conversation
+            LEFT JOIN message ON conversation.idconversation = message.idconversation
+            WHERE conversation.iduser = (SELECT iduser FROM user WHERE email = %s)
+        """
+        cursor.execute(query, (email,))
+        rows = cursor.fetchall()
+
+        if not rows:
+            raise HTTPException(status_code=404, detail=f"Usuario con email {email} no tiene conversaciones")
+
+        conversations = []
+
+        for row in rows:
+            # Imprimir información para depurar
+            print(f"Current row: {row}")
+            print(f"Current conversations: {conversations}")
+
+            # Verificar si es una nueva conversación
+            print(f"Last conversation id: {conversations[-1]['idconversation'] if conversations else None}")
+            print(f"Current conversation id: {row['idconversation']}")
+            
+            if not conversations or int(conversations[-1]["idconversation"]) != row["idconversation"]:
+                conversation = {
+                    "idconversation": row["idconversation"],
+                    "star_date": row["star_date"],
+                    "end_date": row["end_date"],
+                    "iduser": row["iduser"],
+                    "messages": []
+                }
+                conversations.append(conversation)
+
+            # Agregar mensaje a la conversación actual
+            if row["idmessage"] is not None:
+                message = {
+                    "idmessage": row["idmessage"],
+                    "content": row["content"],
+                    "hour": row["hour"]
+                }
+                print(f"Adding message to conversation: {message}")
+                conversations[-1]["messages"].append(message)
+
+        return conversations
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()

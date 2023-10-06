@@ -5,6 +5,7 @@ from typing import Optional  # Importa Optional
 # Clase para representar una conversación
 class Conversation(BaseModel):
     idconversation: int
-    start_date: date
+    star_date: date
     end_date: date
     iduser: int
+    
