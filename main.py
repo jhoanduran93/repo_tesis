@@ -18,10 +18,13 @@ from app.models.user import User
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.security import Security, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from dotenv import load_dotenv
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI()
+
+load_dotenv()
 
 # Configuración CORS para permitir solicitudes desde tu dominio de React
 app.add_middleware(
@@ -33,7 +36,18 @@ app.add_middleware(
 )
 
 # Configura tu clave API de GPT-3
-openai.api_key = Security.GPT3_API_KEY
+#openai.api_key = Security.GPT3_API_KEY
+# Obtener la clave de API
+# Verificar el valor de la clave de API
+print("Valor de GPT3_API_KEY:", os.getenv("GPT3_API_KEY"))
+
+# Obtener la clave de API
+api_key = os.getenv("GPT3_API_KEY")
+
+# Asignar la clave de API a OpenAI
+openai.api_key = api_key
+print("OpenAI API Key:", openai.api_key)
+
 
 
 @app.websocket("/chatbot")
