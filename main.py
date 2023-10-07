@@ -81,7 +81,7 @@ async def chatbot_endpoint(websocket: WebSocket):
 
 
         
-@app.post("/chatbot1user", status_code= status.HTTP_201_CREATED,tags=["Chatbot"])
+@app.post("/cometa1user", status_code= status.HTTP_201_CREATED,tags=["Chatbot"])
 def chatbot(question: str):
     """
     Ruta para obtener una respuesta del chatbot basada en una pregunta.
