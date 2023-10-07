@@ -8,7 +8,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # El tiempo de vencimiento del token (30)
 
 class Security:
-    GPT3_API_KEY = "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"
+    GPT3_API_KEY = "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"
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
