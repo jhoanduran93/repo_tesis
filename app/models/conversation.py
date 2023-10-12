@@ -8,4 +8,4 @@ class Conversation(BaseModel):
     star_date: date
     end_date: date
     iduser: int
-    
+    type_conversation: str

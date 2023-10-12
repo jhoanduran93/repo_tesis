@@ -8,7 +8,6 @@ db_config = {
     "password": "RTfrtrFKOovCPvgjMi84",
     "database": "bls0lv8b15zncfgr7bde",  
 }
-
 try:
     # Intenta establecer la conexión
     conn = mysql.connector.connect(**db_config)

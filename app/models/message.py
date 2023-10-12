@@ -4,6 +4,6 @@ from datetime import date, time
 # Clase para representar un mensaje
 class Message(BaseModel):
     idmessage: int
-    content: str
+    points: int
     hour: time
     idconversation: int

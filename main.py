@@ -37,16 +37,13 @@ app.add_middleware(
 
 # Configura tu clave API de GPT-3
 #openai.api_key = Security.GPT3_API_KEY
-# Obtener la clave de API
-# Verificar el valor de la clave de API
-print("Valor de GPT3_API_KEY:", os.getenv("GPT3_API_KEY"))
 
 # Obtener la clave de API
 api_key = os.getenv("GPT3_API_KEY")
 
 # Asignar la clave de API a OpenAI
 openai.api_key = api_key
-print("OpenAI API Key:", openai.api_key)
+
 
 
 
@@ -238,17 +235,22 @@ async def update_user(user_email: str, updated_user: User):
     finally:
         cursor.close()
 
-@app.post("/create_conversation", status_code=status.HTTP_201_CREATED, response_model=Conversation, tags=["conversation"])
-async def create_conversation(email: str):
+# Endpoint para crear una conversación
+@app.post("/create_conversation", status_code=201, response_model=Conversation, tags=["conversation"])
+async def create_conversation(email: str, type_conversation: str):
     """
     Crea una nueva conversación para un usuario.
 
     Permite a un usuario iniciar una nueva conversación y devuelve detalles de la conversación creada.
+
+    :param email: Correo electrónico del usuario.
+    :param type_conversation: Tipo de conversación.
+    :return: Detalles de la conversación creada.
     """
     cursor = conn.cursor()
-    
+
     try:
-        # Obtiene el ID del usuario usando el correo electrónico
+        # Obtener el ID del usuario usando el correo electrónico
         query_user_id = "SELECT iduser FROM user WHERE email = %s"
         cursor.execute(query_user_id, (email,))
         user_id = cursor.fetchone()
@@ -257,119 +259,117 @@ async def create_conversation(email: str):
             raise HTTPException(status_code=404, detail=f"Usuario con correo electrónico {email} no encontrado")
 
         user_id = user_id[0]
-        
-        # Inserta una nueva conversación en la base de datos
+
+        # Insertar una nueva conversación en la base de datos
         today = date.today()
-        query = "INSERT INTO conversation (star_date, end_date, iduser) VALUES (%s, %s, %s)"
-        cursor.execute(query, (today, today, user_id))
+        query = "INSERT INTO conversation (star_date, end_date, iduser, type_conversation) VALUES (%s, %s, %s, %s)"
+        cursor.execute(query, (today, today, user_id, type_conversation))
         conn.commit()
-        
-        # Obtiene el ID de la conversación recién creada
+
+        # Obtener el ID de la conversación recién creada
         conversation_id = cursor.lastrowid
 
-        # Construye y devuelve una instancia del modelo Conversation con los datos relevantes
-        new_conversation = Conversation(idconversation=conversation_id, start_date=today, end_date=today, iduser=user_id)
+        # Construir y devolver una instancia del modelo Conversation con los datos relevantes
+        new_conversation = Conversation(
+            idconversation=conversation_id,
+            star_date=today,
+            end_date=today,
+            iduser=user_id,
+            type_conversation=type_conversation
+        )
         return new_conversation
-     
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail= "Usuario no encontrado")
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
+
     finally:
         cursor.close()
         
-from fastapi import FastAPI, HTTPException, Path
-from typing import List
-from app.models.conversation import Conversation
-import mysql.connector
-from mysql.connector import errorcode
 
-# ... (código anterior)
-
-@app.get("/get_user_conversations/{email}", response_model=List[Conversation], tags=["conversation"])
-async def get_user_conversations(email: str = Path(..., description="Email del usuario")):
+# Endpoint para ver conversaciónes de usuario
+@app.get("/get_conversations/{email}", response_model=List[Conversation], tags=["conversation"])
+async def get_conversations(email: str):
     """
-    Obtiene todas las conversaciones de un usuario por su correo electrónico.
+    Obtiene todas las conversaciones de un usuario.
 
-    Permite a un usuario obtener una lista de todas sus conversaciones.
-
-    Args:
-        email (str): El correo electrónico del usuario.
-
-    Returns:
-        List[Conversation]: Lista de conversaciones del usuario.
-
-    Raises:
-        HTTPException 404: Si el usuario no tiene conversaciones.
-        HTTPException 500: Si hay un error en el servidor al obtener las conversaciones.
-    """
-    cursor = conn.cursor(dictionary=True)  # Usar dictionary=True para obtener resultados como diccionarios
-    try:
-        # Consulta todas las conversaciones de un usuario en la base de datos
-        query = "SELECT * FROM conversation WHERE iduser = (SELECT iduser FROM user WHERE email = %s)"
-        cursor.execute(query, (email,))
-        
-        conversations = []
-        for row in cursor.fetchall():
-            conversation_model = Conversation(idconversation=row["idconversation"], star_date=row["star_date"], end_date=row["end_date"], iduser=row["iduser"])
-            conversations.append(conversation_model)
-
-        if not conversations:
-            raise HTTPException(status_code=404, detail=f"Usuario con email {email} no tiene conversaciones")
-
-        return conversations
-    except mysql.connector.Error as e:
-        if e.errno == errorcode.ER_NO_SUCH_TABLE:
-            raise HTTPException(status_code=500, detail="Error en la base de datos: la tabla no existe")
-        else:
-            raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-
-@app.post("/send_message", status_code=status.HTTP_201_CREATED, response_model= Message, tags=["message"])
-async def send_message(idconversation: int, content: str):
-    """
-    Envía un mensaje en una conversación.
-
-    Permite a un usuario enviar un mensaje en una conversación existente y devuelve detalles del mensaje enviado.
+    :param email: Correo electrónico del usuario.
+    :return: Lista de conversaciones del usuario.
     """
     cursor = conn.cursor()
+
     try:
-        # Inserta un nuevo mensaje en la base de datos
-        now = datetime.now().time()
-        query = "INSERT INTO message (content, hour, idconversation) VALUES (%s, %s, %s)"
-        cursor.execute(query, (content, now, idconversation))
+        # Obtener el ID del usuario usando el correo electrónico
+        query_user_id = "SELECT iduser FROM user WHERE email = %s"
+        cursor.execute(query_user_id, (email,))
+        user_id = cursor.fetchone()
+
+        if not user_id:
+            raise HTTPException(status_code=404, detail=f"Usuario con correo electrónico {email} no encontrado")
+
+        user_id = user_id[0]
+
+        # Obtener todas las conversaciones del usuario
+        query_conversations = "SELECT idconversation, star_date, end_date, iduser, type_conversation FROM conversation WHERE iduser = %s"
+        cursor.execute(query_conversations, (user_id,))
+        conversations = cursor.fetchall()
+
+        # Construir una lista de instancias del modelo Conversation con los datos relevantes
+        conversation_list = [
+            Conversation(idconversation=conv[0], star_date=conv[1], end_date=conv[2], iduser=conv[3], type_conversation=conv[4])
+            for conv in conversations
+        ]
+
+        return conversation_list
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
+    finally:
+        cursor.close()
+
+# Endpoint para ver enviar msj 
+@app.post("/send_message", status_code=status.HTTP_201_CREATED, response_model=Message, tags=["message"])
+async def send_message(idconversation: int, points: int):
+    """
+    Envía un mensaje en una conversación existente y devuelve detalles del mensaje creado.
+
+    :param idconversation: ID de la conversación en la que se enviará el mensaje.
+    :param points: Puntos del mensaje.
+    :return: Detalles del mensaje creado.
+    """
+    cursor = conn.cursor()
+
+    try:
+        # Verificar si la conversación existe
+        query_conversation = "SELECT idconversation FROM conversation WHERE idconversation = %s"
+        cursor.execute(query_conversation, (idconversation,))
+        existing_conversation = cursor.fetchone()
+
+        if not existing_conversation:
+            raise HTTPException(status_code=404, detail=f"Conversación con ID {idconversation} no encontrada")
+
+        # Insertar un nuevo mensaje en la base de datos
+        current_time = datetime.now().time()
+        query = "INSERT INTO message (points, hour, idconversation) VALUES (%s, %s, %s)"
+        cursor.execute(query, (points, current_time, idconversation))
         conn.commit()
+
+        # Obtener el ID del mensaje recién creado
         message_id = cursor.lastrowid
-        new_message = Message(idmessage=message_id, content = content, hour = now, idconversation = idconversation)
-        return  new_message
+
+        # Construir y devolver una instancia del modelo Message con los datos relevantes
+        new_message = Message(idmessage=message_id, points=points, hour=current_time, idconversation=idconversation)
+        return new_message
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(e)  # Imprimir la excepción completa
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
     finally:
         cursor.close()
 
-@app.get("/get_conversation_messages/{conversation_id}",status_code=status.HTTP_201_CREATED, response_model=List[Message], tags=["message"])
-async def get_conversation_messages(conversation_id: int):
-    """
-    Obtiene todos los mensajes de una conversación.
 
-    Permite obtener una lista de todos los mensajes de una conversación específica.
-    """
-    cursor = conn.cursor()
-    try:
-        # Consulta todos los mensajes de una conversación en la base de datos con la hora formateada
-        query = f"SELECT idmessage, content, TIME_FORMAT(hour, '%H:%i:%s') AS formatted_hour, idconversation FROM message WHERE idconversation = {conversation_id}"
-        cursor.execute(query)
-        messages = []
-        for row in cursor.fetchall():
-            messages.append({"idmessage": row[0], "content": row[1], "hour": row[2], "idconversation": row[3]})
-        return messages
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
 
 @app.post("/login", status_code=status.HTTP_200_OK, tags=["Login"])
 async def login(email: str, password: str):
@@ -427,59 +427,3 @@ async def logout(token: str = Depends(decode_access_token)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/get_user_conversations_all/{email}", response_model=List[Conversation], tags=["conversation"])
-async def get_user_conversations(email: str):
-    cursor = conn.cursor(dictionary=True)
-    try:
-        query = """
-            SELECT conversation.idconversation, conversation.star_date, conversation.end_date, conversation.iduser,
-                   message.idmessage, message.content, message.hour
-            FROM conversation
-            LEFT JOIN message ON conversation.idconversation = message.idconversation
-            WHERE conversation.iduser = (SELECT iduser FROM user WHERE email = %s)
-        """
-        cursor.execute(query, (email,))
-        rows = cursor.fetchall()
-
-        if not rows:
-            raise HTTPException(status_code=404, detail=f"Usuario con email {email} no tiene conversaciones")
-
-        conversations = []
-
-        for row in rows:
-            # Imprimir información para depurar
-            print(f"Current row: {row}")
-            print(f"Current conversations: {conversations}")
-
-            # Verificar si es una nueva conversación
-            print(f"Last conversation id: {conversations[-1]['idconversation'] if conversations else None}")
-            print(f"Current conversation id: {row['idconversation']}")
-            
-            if not conversations or int(conversations[-1]["idconversation"]) != row["idconversation"]:
-                conversation = {
-                    "idconversation": row["idconversation"],
-                    "star_date": row["star_date"],
-                    "end_date": row["end_date"],
-                    "iduser": row["iduser"],
-                    "messages": []
-                }
-                conversations.append(conversation)
-
-            # Agregar mensaje a la conversación actual
-            if row["idmessage"] is not None:
-                message = {
-                    "idmessage": row["idmessage"],
-                    "content": row["content"],
-                    "hour": row["hour"]
-                }
-                print(f"Adding message to conversation: {message}")
-                conversations[-1]["messages"].append(message)
-
-        return conversations
-
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
