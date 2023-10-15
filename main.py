@@ -72,7 +72,7 @@ async def chatbot_endpoint(websocket: WebSocket):
                 response = openai.Completion.create(
                     engine="text-davinci-002",
                     prompt=f"Responder a la siguiente pregunta: {data}",
-                    max_tokens= 200  # Ajusta este valor según tus necesidades
+                    max_tokens= 200  # Cantidad de caracteres
                 )
 
                 # Extrae la respuesta generada por GPT-3
@@ -83,44 +83,12 @@ async def chatbot_endpoint(websocket: WebSocket):
                 await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
     except WebSocketDisconnect as e:
         await websocket.close()
-        # Puedes agregar lógica adicional para manejar desconexiones de WebSocket si es necesario
         print(f"Conexión cerrada: {e}")
     except HTTPException as e:
         await websocket.send_text(f"Error HTTP: {e.detail}")
     except Exception as e:
         await websocket.send_text(f"Error inesperado: {str(e)}")
 
-
-        
-@app.post("/cometa1user", status_code= status.HTTP_201_CREATED,tags=["Chatbot"])
-def chatbot(question: str):
-    """
-    Ruta para obtener una respuesta del chatbot basada en una pregunta.
-
-    Permite a los usuarios enviar preguntas y recibe respuestas generadas por GPT-3.
-
-    Args:
-        question (str): La pregunta del usuario.
-
-    Returns:
-        dict: Un diccionario que contiene la respuesta generada por el chatbot.
-    """
-    try:
-        # Usa GPT-3 para generar una respuesta
-        response = openai.Completion.create(
-            engine="text-davinci-002",
-            prompt=f"Responder a la siguiente pregunta: {question}",
-            max_tokens=50  # Ajusta este valor según tus necesidades
-        )
-
-        # Extrae la respuesta generada por GPT-3
-        answer = response.choices[0].text
-
-        return {"answer": answer}
-
-    except Exception as e:
-        return {"error": str(e)}
-    
 
 @app.post("/create_user", status_code=status.HTTP_201_CREATED, response_model=User, tags=["user"])
 async def create_user(user: User):
