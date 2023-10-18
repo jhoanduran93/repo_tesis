@@ -16,6 +16,7 @@ from mysql.connector import errorcode
 from app.db.database import conn
 from app.models.user import User
 from app.models.conversation import Conversation
+from app.models.loginRequest import  LoginRequest
 from app.models.message import Message
 from app.security import Security, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from dotenv import load_dotenv
@@ -349,7 +350,7 @@ async def send_message(idconversation: int, points: int):
 
 
 @app.post("/login", status_code=status.HTTP_200_OK, tags=["Login"])
-async def login(email: str, password: str):
+async def login(request: LoginRequest):
     """
     Inicia sesión de usuario.
 
@@ -358,7 +359,7 @@ async def login(email: str, password: str):
     cursor = conn.cursor()
     try:
         query = "SELECT * FROM user WHERE email = %s AND password = %s"
-        cursor.execute(query, (email, password))
+        cursor.execute(query, (request.email, request.password))
         user_data = cursor.fetchone()
         if not user_data:
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
