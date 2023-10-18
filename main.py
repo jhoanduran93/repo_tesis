@@ -24,8 +24,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI()
 
-load_dotenv()
-
 # Configuración CORS para permitir solicitudes desde tu dominio de React
 app.add_middleware(
     CORSMiddleware,
@@ -34,6 +32,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+load_dotenv()
+
+
 
 
 # Configura tu clave API de GPT-3
