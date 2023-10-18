@@ -356,6 +356,10 @@ async def login(request: LoginRequest):
 
     Permite a un usuario iniciar sesión proporcionando su correo electrónico y contraseña.
     """
+    
+    print("hola")
+    print(request.email)
+    print(request.password)
     cursor = conn.cursor()
     try:
         query = "SELECT * FROM user WHERE email = %s AND password = %s"
@@ -371,7 +375,7 @@ async def login(request: LoginRequest):
         # Retorna el token JWT junto con un mensaje de éxito
         return {"message": "Inicio de sesión exitoso", "access_token": access_token}
     except Exception as e:
-        print("hola mundo")
+       
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
