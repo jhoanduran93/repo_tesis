@@ -357,7 +357,6 @@ async def login(request: LoginRequest):
     Permite a un usuario iniciar sesión proporcionando su correo electrónico y contraseña.
     """
     
-    print(hola)
     print(request.email)
     print(request.password)
     cursor = conn.cursor()
