@@ -20,14 +20,20 @@ from app.models.message import Message
 from app.security import Security, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from dotenv import load_dotenv
 
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI()
 
-# Configuración CORS para permitir solicitudes desde tu dominio de React
+origins = [
+    "http://localhost:3000",
+    "https://tu-app-react-en-produccion.com",
+    # Otros orígenes permitidos
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Ajusta la URL según la configuración de tu aplicación React local
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
