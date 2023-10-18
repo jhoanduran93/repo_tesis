@@ -29,11 +29,12 @@ load_dotenv()
 # Configuración CORS para permitir solicitudes desde tu dominio de React
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://tu-app-react.com"],  # Reemplaza la URL de tu aplicación React
+    allow_origins=["http://localhost:3000"],  # Ajusta la URL según la configuración de tu aplicación React local
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Configura tu clave API de GPT-3
 #openai.api_key = Security.GPT3_API_KEY
