@@ -371,6 +371,7 @@ async def login(request: LoginRequest):
         # Retorna el token JWT junto con un mensaje de éxito
         return {"message": "Inicio de sesión exitoso", "access_token": access_token}
     except Exception as e:
+        print("hola mundo")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
