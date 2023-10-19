@@ -123,7 +123,7 @@ async def create_user(user: User):
     except mysql.connector.Error as e:
         if e.errno == errorcode.ER_DUP_ENTRY:
             #manejo de un error (entrada duplicada)
-            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrad")
+            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado")
         else:
             # Manejo genérico de otros errores
             raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
