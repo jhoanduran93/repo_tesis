@@ -123,7 +123,7 @@ async def create_user(user: User):
     except mysql.connector.Error as e:
         if e.errno == errorcode.ER_DUP_ENTRY:
             #manejo de un error (entrada duplicada)
-            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado")
+            raise HTTPException(status_code=400, detail="El correo electrónico ya está registradoo")
         else:
             # Manejo genérico de otros errores
             raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
@@ -348,7 +348,6 @@ async def send_message(idconversation: int, points: int):
         cursor.close()
 
 
-
 @app.post("/login", status_code=status.HTTP_200_OK, tags=["Login"])
 async def login(request: LoginRequest):
     """
@@ -356,9 +355,6 @@ async def login(request: LoginRequest):
 
     Permite a un usuario iniciar sesión proporcionando su correo electrónico y contraseña.
     """
-    
-    print(request.email)
-    print(request.password)
     cursor = conn.cursor()
     try:
         query = "SELECT * FROM user WHERE email = %s AND password = %s"
