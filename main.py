@@ -86,7 +86,7 @@ async def chatbot_endpoint(websocket: WebSocket):
             except Exception as e:
                 await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
     except WebSocketDisconnect as e:
-        await websocket.close()
+        #await websocket.close()
         print(f"Conexión cerrada: {e}")
     except HTTPException as e:
         await websocket.send_text(f"Error HTTP: {e.detail}")
