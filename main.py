@@ -42,9 +42,6 @@ app.add_middleware(
 
 load_dotenv()
 
-
-
-
 # Configura tu clave API de GPT-3
 #openai.api_key = Security.GPT3_API_KEY
 
@@ -53,9 +50,6 @@ api_key = os.getenv("GPT3_API_KEY")
 
 # Asignar la clave de API a OpenAI
 openai.api_key = api_key
-
-
-
 
 @app.websocket("/chatbot")
 async def chatbot_endpoint(websocket: WebSocket):
@@ -72,7 +66,7 @@ async def chatbot_endpoint(websocket: WebSocket):
     """
     try:
         await websocket.accept()
-        await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas.")
+        await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntaas.")
 
         while True:
             data = await websocket.receive_text()
