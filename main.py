@@ -66,7 +66,7 @@ async def chatbot_endpoint(websocket: WebSocket):
     """
     try:
         await websocket.accept()
-        await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas!.");
+        await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas!");
 
         while True:
             data = await websocket.receive_text()
