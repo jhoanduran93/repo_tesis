@@ -86,7 +86,7 @@ async def chatbot_endpoint(websocket: WebSocket):
                     response = openai.Completion.create(
                         engine="text-davinci-002",
                         prompt=f"Responder a la siguiente pregunta: {data}",
-                        max_tokens=200  # Cantidad de caracteres
+                        max_tokens=400  # Cantidad de caracteres
                     )
 
                     # Extrae la respuesta generada por GPT-3
