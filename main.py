@@ -92,11 +92,7 @@ async def chatbot_endpoint(websocket: WebSocket):
                     # Extrae la respuesta generada por GPT-3
                     answer = response.choices[0].text
                     logger.debug(f"Respuesta al cliente: {answer}")
-                    
-                    
-                    if not answer.strip():
-                     await websocket.send_text(answer)
-
+                    await websocket.send_text(answer)
 
                 except Exception as e:
                     await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
