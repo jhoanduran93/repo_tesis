@@ -70,6 +70,7 @@ async def chatbot_endpoint(websocket: WebSocket):
 
         while True:
             data = await websocket.receive_text()
+            print(f"Mensaje del cliente: {data}")
 
             try:
                 # Usa GPT-3 para generar una respuesta
