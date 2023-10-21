@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI()
 
-"""
+
 origins = [
     "http://localhost:3000",
     "https://tu-app-react-en-produccion.com",
@@ -44,7 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-"""
+
 
 load_dotenv()
 
