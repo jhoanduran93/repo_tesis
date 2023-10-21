@@ -53,6 +53,7 @@ openai.api_key = api_key
 
 @app.websocket("/chatbot")
 async def chatbot_endpoint(websocket: WebSocket):
+    await websocket.accept()
     """
     Ruta WebSocket para interactuar con el chatbot.
 
@@ -65,7 +66,7 @@ async def chatbot_endpoint(websocket: WebSocket):
         None
     """
     try:
-        await websocket.accept()
+       
         await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas!");
 
         while True:
@@ -83,8 +84,8 @@ async def chatbot_endpoint(websocket: WebSocket):
                 # Extrae la respuesta generada por GPT-3
                 answer = response.choices[0].text
                 print(f"Respuesta al cliente: {answer}")
-                await websocket.accept()
                 await websocket.send_text(answer)
+                
             except Exception as e:
                 await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
     except WebSocketDisconnect as e:
