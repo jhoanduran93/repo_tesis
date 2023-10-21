@@ -95,7 +95,7 @@ async def chatbot_endpoint(websocket: WebSocket):
                     
                     
                     if not answer.strip():
-                       await websocket.send_text(answer)
+                     await websocket.send_text(answer)
 
 
                 except Exception as e:
