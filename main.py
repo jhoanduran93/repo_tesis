@@ -93,7 +93,7 @@ async def chatbot_endpoint(websocket: WebSocket):
                     answer = response.choices[0].text
 
                     logger.debug(f"Respuesta al cliente: {answer}")
-                    await websocket.send_text(answer)
+                    await websocket.send_text("\n" + answer)
 
                 except Exception as e:
                     await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
