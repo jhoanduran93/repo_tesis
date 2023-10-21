@@ -61,10 +61,9 @@ openai.api_key = os.getenv("GPT3_API_KEY")
 
 # Crea una instancia de socket.io
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins="*")
-app.mount("/chatbot", socketio.ASGIApp(sio))
+app.mount("/socket.io", socketio.ASGIApp(sio))
 
-
-@app.websocket("/chatbot")
+@app.websocket("/socket.io")
 async def chatbot_endpoint(websocket: WebSocket):
     try:
         await websocket.accept()
