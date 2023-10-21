@@ -4,6 +4,7 @@ import mysql.connector
 from datetime import date, datetime, timedelta
 from typing import List, Union
 import logging 
+import socketio
 
 from fastapi import FastAPI, HTTPException, status, WebSocket, Depends, HTTPException,  WebSocketDisconnect, Path
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,10 +24,12 @@ from app.security import Security, create_access_token, decode_access_token, ACC
 from dotenv import load_dotenv
 
 
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI()
 
+"""
 origins = [
     "http://localhost:3000",
     "https://tu-app-react-en-produccion.com",
@@ -41,31 +44,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+"""
+
 load_dotenv()
 
 # Configura tu clave API de GPT-3
 #openai.api_key = Security.GPT3_API_KEY
 
 # Obtener la clave de API
-api_key = os.getenv("GPT3_API_KEY")
+#api_key = os.getenv("GPT3_API_KEY")
 
 # Asignar la clave de API a OpenAI
-openai.api_key = api_key
+#openai.api_key = api_key
+
+openai.api_key = os.getenv("GPT3_API_KEY")
+
+# Crea una instancia de socket.io
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins="*")
+app.mount("/socket.io", socketio.WSGIApp(sio))
+
 
 @app.websocket("/chatbot")
 async def chatbot_endpoint(websocket: WebSocket):
-    
-    """
-    Ruta WebSocket para interactuar con el chatbot.
-
-    Permite a los usuarios enviar preguntas y recibe respuestas generadas por GPT-3.
-
-    Args:
-        websocket (WebSocket): La conexión WebSocket establecida.
-
-    Returns:
-        None
-    """
     try:
         await websocket.accept()
         await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas!")
@@ -78,12 +78,12 @@ async def chatbot_endpoint(websocket: WebSocket):
             try:
                 data = await websocket.receive_text()
                 logger.debug(f"Mensaje del cliente: {data}")
-                
+
                 # Verificar si el mensaje del cliente no está vacío
                 if not data.strip():
                     await websocket.send_text("Por favor, ingresa una pregunta válida.")
                     continue  # Saltar al siguiente ciclo
-                
+
                 try:
                     # Usa GPT-3 para generar una respuesta
                     response = openai.Completion.create(
@@ -96,21 +96,15 @@ async def chatbot_endpoint(websocket: WebSocket):
                     answer = response.choices[0].text
                     logger.debug(f"Respuesta al cliente: {answer}")
                     await websocket.send_text(answer)
-                    
+
                 except Exception as e:
                     await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
-            except WebSocketDisconnect as e:
+            except socketio.exceptions.ConnectionError:
                 await websocket.close()
-                logger.error(f"Conexión cerrada: {e}")
-            except HTTPException as e:
-                await websocket.send_text(f"Error HTTP: {e.detail}")
             except Exception as e:
                 await websocket.send_text(f"Error inesperado: {str(e)}")
-    except WebSocketDisconnect as e:
+    except socketio.exceptions.ConnectionError:
         await websocket.close()
-        logger.error(f"Conexión cerrada: {e}")
-    except HTTPException as e:
-        await websocket.send_text(f"Error HTTP: {e.detail}")
     except Exception as e:
         await websocket.send_text(f"Error inesperado: {str(e)}")
         
