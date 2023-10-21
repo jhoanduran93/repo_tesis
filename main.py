@@ -44,8 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
 load_dotenv()
 
 # Configura tu clave API de GPT-3
@@ -61,9 +59,9 @@ openai.api_key = os.getenv("GPT3_API_KEY")
 
 # Crea una instancia de socket.io
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins="*")
-app.mount("/socket.io", socketio.ASGIApp(sio))
+app.mount("/chatbot", socketio.ASGIApp(sio))
 
-@app.websocket("/socket.io")
+@app.websocket("/chatbot")
 async def chatbot_endpoint(websocket: WebSocket):
     try:
         await websocket.accept()
