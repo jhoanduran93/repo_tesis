@@ -71,10 +71,17 @@ async def chatbot_endpoint(websocket: WebSocket):
 
         while True:
             data = await websocket.receive_text()
-            print(f"Mensaje del cliente: {data}")
+            
+            # Verificar si el mensaje del cliente no está vacío
+            if not data.strip():
+                await websocket.send_text("Por favor, ingresa una pregunta válida.")
+                continue  # Saltar al siguiente ciclo
 
+            print(f"Mensaje del cliente: {data}")
+            
             try:
                 # Usa GPT-3 para generar una respuesta
+                
                 response = openai.Completion.create(
                     engine="text-davinci-002",
                     prompt=f"Responder a la siguiente pregunta: {data}",
@@ -89,7 +96,7 @@ async def chatbot_endpoint(websocket: WebSocket):
             except Exception as e:
                 await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
     except WebSocketDisconnect as e:
-        #await websocket.close()
+        await websocket.close()
         print(f"Conexión cerrada: {e}")
     except HTTPException as e:
         await websocket.send_text(f"Error HTTP: {e.detail}")
