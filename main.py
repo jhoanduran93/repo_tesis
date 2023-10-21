@@ -3,6 +3,7 @@ import sys
 import mysql.connector
 from datetime import date, datetime, timedelta
 from typing import List, Union
+import logging 
 
 from fastapi import FastAPI, HTTPException, status, WebSocket, Depends, HTTPException,  WebSocketDisconnect, Path
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,43 +68,52 @@ async def chatbot_endpoint(websocket: WebSocket):
     """
     try:
         await websocket.accept()
-        await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas!");
+        await websocket.send_text("¡Bienvenido! Puedes comenzar a hacer preguntas!")
+
+        # Configurar el sistema de registro
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
 
         while True:
-            data = await websocket.receive_text()
-            
-            # Verificar si el mensaje del cliente no está vacío
-            if not data.strip():
-                await websocket.send_text("Por favor, ingresa una pregunta válida.")
-                continue  # Saltar al siguiente ciclo
-
-            print(f"Mensaje del cliente: {data}")
-            
             try:
-                # Usa GPT-3 para generar una respuesta
+                data = await websocket.receive_text()
+                logger.debug(f"Mensaje del cliente: {data}")
                 
-                response = openai.Completion.create(
-                    engine="text-davinci-002",
-                    prompt=f"Responder a la siguiente pregunta: {data}",
-                    max_tokens= 200  # Cantidad de caracteres
-                )
+                # Verificar si el mensaje del cliente no está vacío
+                if not data.strip():
+                    await websocket.send_text("Por favor, ingresa una pregunta válida.")
+                    continue  # Saltar al siguiente ciclo
+                
+                try:
+                    # Usa GPT-3 para generar una respuesta
+                    response = openai.Completion.create(
+                        engine="text-davinci-002",
+                        prompt=f"Responder a la siguiente pregunta: {data}",
+                        max_tokens=200  # Cantidad de caracteres
+                    )
 
-                # Extrae la respuesta generada por GPT-3
-                answer = response.choices[0].text
-                print(f"Respuesta al cliente: {answer}")
-                await websocket.send_text(answer)
-                
+                    # Extrae la respuesta generada por GPT-3
+                    answer = response.choices[0].text
+                    logger.debug(f"Respuesta al cliente: {answer}")
+                    await websocket.send_text(answer)
+                    
+                except Exception as e:
+                    await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
+            except WebSocketDisconnect as e:
+                await websocket.close()
+                logger.error(f"Conexión cerrada: {e}")
+            except HTTPException as e:
+                await websocket.send_text(f"Error HTTP: {e.detail}")
             except Exception as e:
-                await websocket.send_text(f"Error en la generación de respuesta: {str(e)}")
+                await websocket.send_text(f"Error inesperado: {str(e)}")
     except WebSocketDisconnect as e:
         await websocket.close()
-        print(f"Conexión cerrada: {e}")
+        logger.error(f"Conexión cerrada: {e}")
     except HTTPException as e:
         await websocket.send_text(f"Error HTTP: {e.detail}")
     except Exception as e:
         await websocket.send_text(f"Error inesperado: {str(e)}")
-
-
+        
 @app.post("/create_user", status_code=status.HTTP_201_CREATED, response_model=User, tags=["user"])
 async def create_user(user: User):
     """
