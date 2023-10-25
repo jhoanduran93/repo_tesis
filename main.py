@@ -33,6 +33,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000",
     "https://tu-app-react-en-produccion.com",
+     "https://famous-fairy-a237ea.netlify.app",
     # Otros orígenes permitidos
 ]
 
