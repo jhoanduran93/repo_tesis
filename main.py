@@ -358,12 +358,15 @@ async def login(request: LoginRequest):
 
     Permite a un usuario iniciar sesión proporcionando su correo electrónico y contraseña.
     """
+    if not conn.is_connected():
+        # Si la conexión no está activa, lanzar un error 500
+        raise HTTPException(status_code=500, detail="Error en la conexión a la base de datos!!!")
+    
     cursor = conn.cursor()
     try:
         query = "SELECT * FROM user WHERE email = %s AND password = %s"
         cursor.execute(query, (request.email, request.password))
         user_data = cursor.fetchone()
-        cursor.close()
         if not user_data:
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
         
