@@ -363,6 +363,7 @@ async def login(request: LoginRequest):
         query = "SELECT * FROM user WHERE email = %s AND password = %s"
         cursor.execute(query, (request.email, request.password))
         user_data = cursor.fetchone()
+        cursor.close()
         if not user_data:
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
         
