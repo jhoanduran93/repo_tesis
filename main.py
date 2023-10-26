@@ -359,9 +359,9 @@ async def login(request: LoginRequest):
 
     Permite a un usuario iniciar sesión proporcionando su correo electrónico y contraseña.
     """
-    if not conn.is_connected():
+   # if not conn.is_connected():
         # Reconectar a la base de datos
-        conn.reconnect_to_database;
+        #conn.reconnect_to_database;
     
     cursor = conn.cursor()
     try:
