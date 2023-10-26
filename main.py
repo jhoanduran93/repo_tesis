@@ -361,7 +361,7 @@ async def login(request: LoginRequest):
     """
     if not conn.is_connected():
         # Reconectar a la base de datos
-        conn = mysql.connector.connect(**db_config)
+        conn.reconnect_to_database;
     
     cursor = conn.cursor()
     try:
