@@ -15,7 +15,7 @@ import openai
 
 from mysql.connector import errorcode
 
-from app.db.database import conn
+from app.db.database import conn, db_config
 from app.models.user import User
 from app.db.database import reconnect_to_database
 from app.models.conversation import Conversation
@@ -360,8 +360,8 @@ async def login(request: LoginRequest):
     Permite a un usuario iniciar sesión proporcionando su correo electrónico y contraseña.
     """
     if not conn.is_connected():
-        # Si la conexión no está activa, lanzar un error 500
-        raise HTTPException(status_code=500, detail="Error en la conexión a la base de datos!!!")
+        # Reconectar a la base de datos
+        conn = reconnect_to_database(db_config)
     
     cursor = conn.cursor()
     try:
