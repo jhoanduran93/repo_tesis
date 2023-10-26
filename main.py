@@ -359,11 +359,10 @@ async def login(request: LoginRequest):
 
     Permite a un usuario iniciar sesión proporcionando su correo electrónico y contraseña.
     """
-    if not conn.is_connected(){
+    if not conn.is_connected():
        # Si la conexión no está activa, lanzar un error 500
-        raise HTTPException(status_code=500, detail="Error en la conexión a la base de datos!!!") 
-         conn = reconnect_to_database(db_config)
-    }
+        conn = reconnect_to_database()
+    
     
     cursor = conn.cursor()
     try:
